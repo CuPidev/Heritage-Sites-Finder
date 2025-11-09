@@ -8,3 +8,4 @@ data/
 *.db
 *.pkl
 .venv
+.idea
