@@ -1,0 +1,6 @@
+requests>=2.25.1
+scikit-learn>=1.0
+flask>=2.0.0
+flask-cors>=3.0.10
+joblib>=1.2.0
+pytest>=6.0
