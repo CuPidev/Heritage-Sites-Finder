@@ -1,6 +1,6 @@
 # Heritage Sites Finder (UNESCO World Heritage IR project)
 
-Small Information Retrieval (IR) starter project that fetches UNESCO World Heritage data, builds a TF-IDF index, and provides a tiny CLI to search site descriptions.
+Small Information Retrieval (IR) project that fetches UNESCO World Heritage data, builds a TF-IDF index, and provides a tiny CLI to search site descriptions.
 
 Quick start
 
@@ -33,10 +33,3 @@ Project layout
 Notes
 
 The project uses scikit-learn's TfidfVectorizer for a compact search index. The fetcher attempts to hit UNESCO's public listing; if the endpoint changes, pass your own JSON file to the CLI.
-
-# Heritage-Sites-Finder
-
-IR Project repo
-Hello2
-
-Have a nice cup of tea
