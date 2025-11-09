@@ -1,3 +1,6 @@
+the dir is ./Heritage-Sites-Finder
+the .venv is already created
+
 This looks like a fascinating course project on Information Retrieval! Since you have 3 people in your group, I'll structure the steps and requirements specifically for a three-student project based on the uploaded documents.
 
 🚀 Information Retrieval Course Project Plan (3 People)
