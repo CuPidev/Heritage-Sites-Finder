@@ -4,3 +4,6 @@ flask>=2.0.0
 flask-cors>=3.0.10
 joblib>=1.2.0
 pytest>=6.0
+beautifulsoup4>=4.9.3
+lxml>=4.6.0
+html5lib>=1.1
