@@ -2,6 +2,7 @@
 
 import os
 import json
+import random
 from typing import Optional, Any, Dict
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
@@ -145,6 +146,85 @@ def create_app(static_folder: Optional[str] = None):
             results = results[:k]
 
         return jsonify(results)
+
+    @app.route("/browse")
+    def browse():
+        """Return a paginated list of documents for browsing.
+
+        Query params:
+        - offset: start index (default 0)
+        - limit: number of items to return (default 10, max 100)
+        - shuffle: if true, return a random sample of `limit` items
+        """
+        try:
+            offset = int(request.args.get("offset", "0"))
+        except Exception:
+            offset = 0
+        try:
+            limit = int(request.args.get("limit", "10"))
+        except Exception:
+            limit = 10
+        limit = max(1, min(limit, 100))
+        shuffle_flag = request.args.get("shuffle") in ("1", "true", "True")
+
+        # If a query is provided, use the indexer to rank documents, then paginate
+        q = request.args.get("q")
+        if q:
+            # use indexer to rank all documents
+            total_docs = len(getattr(indexer, "docs", []) or [])
+            top_k_all = max(1, total_docs)
+            docs_ranked = indexer.search(q, top_k=top_k_all)
+            total = len(docs_ranked)
+            # apply pagination on ranked docs
+            start = max(0, offset)
+            slice_ranked = docs_ranked[start : start + limit]
+            items = [
+                {
+                    "id": r.get("id"),
+                    "name": r.get("name"),
+                    "description": r.get("description"),
+                }
+                for r in slice_ranked
+            ]
+            return jsonify(
+                {"total": total, "offset": start, "limit": limit, "items": items}
+            )
+
+        docs = getattr(indexer, "docs", []) or []
+        total = len(docs)
+        if shuffle_flag:
+            # sample without replacement
+            sample_count = min(limit, total)
+            sampled = random.sample(docs, sample_count) if sample_count else []
+            items = [
+                {
+                    "id": str(d.get("id", "")),
+                    "name": d.get("name"),
+                    "description": d.get("description"),
+                    "country": d.get("country"),
+                }
+                for d in sampled
+            ]
+            return jsonify(
+                {"total": total, "offset": offset, "limit": limit, "items": items}
+            )
+
+        # clamp offset
+        if offset < 0:
+            offset = 0
+        items_slice = docs[offset : offset + limit]
+        items = [
+            {
+                "id": str(d.get("id", "")),
+                "name": d.get("name"),
+                "description": d.get("description"),
+                "country": d.get("country"),
+            }
+            for d in items_slice
+        ]
+        return jsonify(
+            {"total": total, "offset": offset, "limit": limit, "items": items}
+        )
 
     @app.route("/rebuild", methods=["POST", "GET"])
     def rebuild():

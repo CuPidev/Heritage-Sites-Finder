@@ -47,6 +47,19 @@ async function search(q, k) {
         const data = await res.json();
         const el = document.getElementById("results");
         el.innerHTML = "";
+        // toolbar: open full list in browse view
+        if (q) {
+            const toolbar = document.createElement("div");
+            toolbar.className = "mb-3 flex items-center justify-end";
+            const openBtn = document.createElement("a");
+            openBtn.href = `/browse.html?q=${encodeURIComponent(
+                q
+            )}&limit=${encodeURIComponent(Math.max(10, k))}`;
+            openBtn.className = "text-sm text-blue-600 mr-2";
+            openBtn.textContent = "Open full list";
+            toolbar.appendChild(openBtn);
+            el.appendChild(toolbar);
+        }
         if (!Array.isArray(data) || data.length === 0) {
             el.innerText = "No results";
             return;
