@@ -66,6 +66,9 @@ jobs:
                     pip install --upgrade pip
                     pip install -r "$DEPLOY_PATH/requirements.txt"
                     sudo systemctl restart heritage
+                    # trigger the indexer service to rebuild the enriched index (best-effort)
+                    # requires the deploy user to have NOPASSWD sudo for starting the unit, otherwise this will be ignored
+                    sudo systemctl start heritage-indexer.service || true
                     echo "Remote deploy finished"
                   REMOTE
 
