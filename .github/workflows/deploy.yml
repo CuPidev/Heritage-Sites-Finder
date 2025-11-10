@@ -11,59 +11,51 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Set up SSH
+            - name: Start ssh-agent and add key
+              uses: webfactory/ssh-agent@v0.7.0
+              with:
+                  ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+            - name: Add host to known_hosts (non-blocking)
               run: |
                   mkdir -p ~/.ssh
-                  # write private key safely and set permissions
-                  printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-                  chmod 600 ~/.ssh/id_rsa
-                  # add host key (use port if provided)
-                  if [ -n "$DEPLOY_PORT" ]; then
-                    ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts || true
+                  if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
+                    ssh-keyscan -p "${{ secrets.DEPLOY_PORT }}" -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts || true
                   else
-                    ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts || true
+                    ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts || true
                   fi
-              env:
-                  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-                  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-                  DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-
-            - name: Rsync project to VPS
-              run: |
-                  # support optional non-standard SSH port via DEPLOY_PORT secret
-                  SSH_OPTS=""
-                  if [ -n "$DEPLOY_PORT" ]; then
-                    RSYNC_SSH="-e \"ssh -p $DEPLOY_PORT\""
-                  else
-                    RSYNC_SSH=""
-                  fi
-                  eval rsync -avz $RSYNC_SSH --delete --exclude='.git' --exclude='.venv' --exclude='data' ./ "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_PATH }}"
-              env:
-                  DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
 
             - name: Preflight SSH check
               run: |
                   SSH_OPTS=""
-                  if [ -n "$DEPLOY_PORT" ]; then
-                    SSH_OPTS="-p $DEPLOY_PORT"
+                  if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
+                    SSH_OPTS="-p ${{ secrets.DEPLOY_PORT }}"
                   fi
                   echo "Testing SSH connection to ${DEPLOY_USER}@${DEPLOY_HOST} ${DEPLOY_PORT:+on port $DEPLOY_PORT}"
-                  # Try a quick connection to verify key and host reachability. This will fail fast and print a clear message.
                   ssh -o BatchMode=yes -o ConnectTimeout=10 $SSH_OPTS "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "echo connected" || (echo "SSH preflight failed: check DEPLOY_HOST/DEPLOY_USER, ensure the deploy public key is in ~/.ssh/authorized_keys, and that the host is reachable from GitHub Actions runners" && exit 1)
-              env:
-                  DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
-                  DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-                  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+
+            - name: Rsync project to VPS (robust)
+              run: |
+                  set -euo pipefail
+                  # Build rsync command with explicit ssh options (avoids prompting). Use a small IO timeout so hung transfers fail fast.
+                  if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
+                    SSH_CMD=(ssh -o BatchMode=yes -o ConnectTimeout=10 -p "${{ secrets.DEPLOY_PORT }}")
+                  else
+                    SSH_CMD=(ssh -o BatchMode=yes -o ConnectTimeout=10)
+                  fi
+                  RSYNC_OPTS=(rsync -avz --timeout=60 --progress --delete --exclude='.git' --exclude='.venv' --exclude='data')
+                  # run rsync via the SSH command built above
+                  "${RSYNC_OPTS[@]}" -e "${SSH_CMD[*]}" ./ "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_PATH }}"
 
             - name: Remote setup and restart
               run: |
-                  SSH_OPTS=""
-                  if [ -n "$DEPLOY_PORT" ]; then
-                    SSH_OPTS="-p $DEPLOY_PORT"
+                  set -euo pipefail
+                  if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
+                    SSH_OPTS="-p ${{ secrets.DEPLOY_PORT }}"
+                  else
+                    SSH_OPTS=""
                   fi
                   ssh $SSH_OPTS "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "bash -l -c 'set -euo pipefail; cd "${{ secrets.DEPLOY_PATH }}"; if [ ! -d .venv ]; then python3 -m venv .venv; fi; . .venv/bin/activate; pip install --upgrade pip; pip install -r requirements.txt; sudo systemctl restart heritage'"
-              env:
-                  DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
 
             - name: Done
               run: echo "Deployment to ${{ secrets.DEPLOY_HOST }} completed."
