@@ -1,0 +1,39 @@
+body {
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    padding: 1rem;
+}
+input[type="text"] {
+    width: 60%;
+    padding: 0.5rem;
+}
+button {
+    padding: 0.5rem 1rem;
+}
+.result {
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    border-bottom: 1px solid #ddd;
+}
+.score {
+    color: #666;
+    font-size: 0.9rem;
+}
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ccc;
+    border-top-color: #333;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
