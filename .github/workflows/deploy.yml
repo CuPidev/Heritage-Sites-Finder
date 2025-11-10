@@ -24,46 +24,66 @@ jobs:
               with:
                   ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-            - name: Add host to known_hosts (non-blocking)
-              run: |
-                  mkdir -p ~/.ssh
-                  if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
-                    ssh-keyscan -p "${{ secrets.DEPLOY_PORT }}" -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts || true
-                  else
-                    ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts || true
-                  fi
+            name: Deploy to VPS
 
-            - name: Preflight SSH check
-              run: |
-                  SSH_OPTS=""
-                  if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
-                    SSH_OPTS="-p ${{ secrets.DEPLOY_PORT }}"
-                  fi
-                  echo "Testing SSH connection to ${DEPLOY_USER}@${DEPLOY_HOST} ${DEPLOY_PORT:+on port $DEPLOY_PORT}"
-                  ssh -o BatchMode=yes -o ConnectTimeout=10 $SSH_OPTS "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "echo connected" || (echo "SSH preflight failed: check DEPLOY_HOST/DEPLOY_USER, ensure the deploy public key is in ~/.ssh/authorized_keys, and that the host is reachable from GitHub Actions runners" && exit 1)
+            on:
+              push:
+                branches: [main]
 
-            - name: Rsync project to VPS (robust)
-              run: |
-                  set -euo pipefail
-                  # Build rsync command with explicit ssh options (avoids prompting). Use a small IO timeout so hung transfers fail fast.
-                  if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
-                    SSH_CMD=(ssh -o BatchMode=yes -o ConnectTimeout=10 -p "${{ secrets.DEPLOY_PORT }}")
-                  else
-                    SSH_CMD=(ssh -o BatchMode=yes -o ConnectTimeout=10)
-                  fi
-                  RSYNC_OPTS=(rsync -avz --timeout=60 --progress --delete --exclude='.git' --exclude='.venv' --exclude='data')
-                  # run rsync via the SSH command built above
-                  "${RSYNC_OPTS[@]}" -e "${SSH_CMD[*]}" ./ "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_PATH }}"
+            jobs:
+              deploy:
+                runs-on: ubuntu-latest
 
-            - name: Remote setup and restart
-              run: |
-                  set -euo pipefail
-                  if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
-                    SSH_OPTS="-p ${{ secrets.DEPLOY_PORT }}"
-                  else
-                    SSH_OPTS=""
-                  fi
-                  ssh $SSH_OPTS "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "bash -l -c 'set -euo pipefail; cd "${{ secrets.DEPLOY_PATH }}"; if [ ! -d .venv ]; then python3 -m venv .venv; fi; . .venv/bin/activate; pip install --upgrade pip; pip install -r requirements.txt; sudo systemctl restart heritage'"
+                steps:
+                  - name: Checkout
+                    uses: actions/checkout@v4
 
-            - name: Done
-              run: echo "Deployment to ${{ secrets.DEPLOY_HOST }} completed."
+                  - name: Start ssh-agent and add key
+                    uses: webfactory/ssh-agent@v0.7.0
+                    with:
+                      ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+                  - name: Add host to known_hosts (non-blocking)
+                    run: |
+                      mkdir -p ~/.ssh
+                      if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
+                        ssh-keyscan -p "${{ secrets.DEPLOY_PORT }}" -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts || true
+                      else
+                        ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts || true
+                      fi
+
+                  - name: Preflight SSH check
+                    run: |
+                      SSH_OPTS=""
+                      if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
+                        SSH_OPTS="-p ${{ secrets.DEPLOY_PORT }}"
+                      fi
+                      echo "Testing SSH connection to ${DEPLOY_USER}@${DEPLOY_HOST} ${DEPLOY_PORT:+on port $DEPLOY_PORT}"
+                      ssh -o BatchMode=yes -o ConnectTimeout=10 $SSH_OPTS "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "echo connected" || (echo "SSH preflight failed: check DEPLOY_HOST/DEPLOY_USER and that the deploy public key is in ~/.ssh/authorized_keys" && exit 1)
+
+                  - name: Create tarball
+                    run: |
+                      # create a tarball of the repository excluding virtualenv, data and git
+                      tar -czf /tmp/repo_deploy.tar.gz --exclude='.git' --exclude='.venv' --exclude='data' .
+                      echo "Created /tmp/repo_deploy.tar.gz (size: $(ls -lh /tmp/repo_deploy.tar.gz | awk '{print $5}'))"
+
+                  - name: Copy tarball to VPS
+                    run: |
+                      set -euo pipefail
+                      if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
+                        scp -o BatchMode=yes -o ConnectTimeout=10 -P "${{ secrets.DEPLOY_PORT }}" /tmp/repo_deploy.tar.gz "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/repo_deploy.tar.gz"
+                      else
+                        scp -o BatchMode=yes -o ConnectTimeout=10 /tmp/repo_deploy.tar.gz "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/repo_deploy.tar.gz"
+                      fi
+
+                  - name: Remote extract, install and restart
+                    run: |
+                      set -euo pipefail
+                      SSH_OPTS=""
+                      if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
+                        SSH_OPTS="-p ${{ secrets.DEPLOY_PORT }}"
+                      fi
+                      ssh $SSH_OPTS "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "bash -l -c 'set -euo pipefail; DEPLOY_PATH=${{ secrets.DEPLOY_PATH }}; echo "Deploying to $DEPLOY_PATH"; sudo mkdir -p $DEPLOY_PATH; sudo tar -xzf /tmp/repo_deploy.tar.gz -C $DEPLOY_PATH; sudo rm -f /tmp/repo_deploy.tar.gz; if [ ! -d $DEPLOY_PATH/.venv ]; then python3 -m venv $DEPLOY_PATH/.venv; fi; source $DEPLOY_PATH/.venv/bin/activate; pip install --upgrade pip; pip install -r $DEPLOY_PATH/requirements.txt; sudo systemctl restart heritage; echo "Remote deploy finished"'
+
+                  - name: Cleanup local tarball
+                    run: rm -f /tmp/repo_deploy.tar.gz
