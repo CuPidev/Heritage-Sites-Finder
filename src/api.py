@@ -2,7 +2,7 @@
 
 import os
 import json
-from typing import Optional
+from typing import Optional, Any, Dict
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
@@ -18,7 +18,17 @@ SITES_JSON = os.path.join(DATA_DIR, "sites.json")
 INDEX_PKL = os.path.join(DATA_DIR, "index.pkl")
 ENRICHED_INDEX_PKL = os.path.join(DATA_DIR, "index_enriched.pkl")
 
+# Results paging defaults and safety clamps
+DEFAULT_K = 5
+MIN_K = 1
+# Allow overriding max via environment variable (useful for deployment)
+try:
+    MAX_K = int(os.environ.get("HSF_MAX_K", "50"))
+except Exception:
+    MAX_K = 50
 
+
+# this is what is actually used by the runner
 def create_app(static_folder: Optional[str] = None):
     if static_folder is None:
         static_folder = os.path.join(ROOT, "web")
@@ -60,7 +70,14 @@ def create_app(static_folder: Optional[str] = None):
     @app.route("/search")
     def search():
         q = request.args.get("q", "")
-        k = int(request.args.get("k", 5))
+        # parse k safely and clamp to configured bounds to avoid excessive work
+        k_raw = request.args.get("k", None)
+        try:
+            k = int(k_raw) if k_raw is not None else DEFAULT_K
+        except (ValueError, TypeError):
+            k = DEFAULT_K
+        # enforce clamps
+        k = max(MIN_K, min(k, MAX_K))
         if not q:
             return jsonify({"error": "missing query parameter 'q'"}), 400
         # Simple geographic parsing: detect "in <place>" and use it as a post-filter
@@ -225,7 +242,8 @@ def create_app(static_folder: Optional[str] = None):
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
-        resp = {"saved": count}
+        # use a generic dict[Any] so static checkers allow mixed value types
+        resp: Dict[str, Any] = {"saved": count}
         if errors:
             resp["partial_errors"] = errors
         return jsonify(resp), 201
