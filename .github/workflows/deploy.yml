@@ -47,16 +47,14 @@ jobs:
             - name: Remote extract, install and restart
               run: |
                   set -euo pipefail
-                  SSH_OPTS=""
+                  # compute optional port argument (empty if not provided)
+                  PORT_ARG=""
                   if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
-                    SSH_OPTS="-p ${{ secrets.DEPLOY_PORT }}"
+                    PORT_ARG="-p ${{ secrets.DEPLOY_PORT }}"
                   fi
-                  # use sshpass to run remote commands over password-based SSH
-                  if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
-                    sshpass -p "${{ secrets.DEPLOY_PASSWORD }}" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -p "${{ secrets.DEPLOY_PORT }}" "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "bash -s" <<'REMOTE'
-                  else
-                    sshpass -p "${{ secrets.DEPLOY_PASSWORD }}" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "bash -s" <<'REMOTE'
-                  fi
+
+                  # single heredoc invocation (avoids nested heredoc parsing issues)
+                  sshpass -p "${{ secrets.DEPLOY_PASSWORD }}" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 $PORT_ARG "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "bash -s" <<'REMOTE'
                     set -euo pipefail
                     DEPLOY_PATH='${{ secrets.DEPLOY_PATH }}'
                     echo "Deploying to $DEPLOY_PATH"
