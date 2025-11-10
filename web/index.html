@@ -28,7 +28,6 @@
                     </ul>
                 </div>
             </header>
-
             <div
                 class="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-4"
             >
@@ -74,9 +73,29 @@
                         class="ml-3 text-sm text-blue-600"
                         >Test backend</a
                     >
-                    <a href="/browse.html" class="ml-4 text-sm text-blue-600"
-                        >Browse</a
+                    <!-- prettier Browse button -->
+                    <a
+                        href="/browse.html?shuffle=1"
+                        class="ml-4 inline-flex items-center gap-2 bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 shadow-sm"
                     >
+                        <!-- list icon: three horizontal lines -->
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M3 6h18"></path>
+                            <path d="M3 12h18"></path>
+                            <path d="M3 18h18"></path>
+                        </svg>
+                        <span class="text-sm font-medium">Browse</span>
+                    </a>
                 </div>
             </div>
 

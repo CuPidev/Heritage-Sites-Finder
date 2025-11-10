@@ -10,17 +10,34 @@
     <body class="bg-gray-50 text-gray-900 min-h-screen">
         <div class="max-w-3xl mx-auto px-4 py-6">
             <header class="mb-6">
+                <div class="mb-3">
+                    <a
+                        href="/index.html"
+                        class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800"
+                    >
+                        <!-- left arrow -->
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M15 18l-6-6 6-6"></path>
+                        </svg>
+                        <span class="text-sm font-medium">Back</span>
+                    </a>
+                </div>
                 <h1 class="text-2xl font-semibold mb-2">
                     Browse heritage sites
                 </h1>
                 <p class="text-sm text-gray-600 mb-2">
                     Browse the collection. Use pagination or shuffle to explore.
                 </p>
-                <div class="flex gap-3">
-                    <a href="/index.html" class="text-sm text-blue-600"
-                        >Search</a
-                    >
-                </div>
             </header>
 
             <div id="controls" class="flex items-center gap-3 mb-4"></div>

@@ -6,6 +6,8 @@ function qs(key, fallback) {
 let offset = parseInt(qs("offset", "0"), 10) || 0;
 let limit = Math.min(100, Math.max(1, parseInt(qs("limit", "10"), 10) || 10));
 const q = qs("q", "");
+// preserve shuffle mode via URL param so reload keeps random results
+let shuffleMode = qs("shuffle", "0") === "1";
 let total = 0;
 
 const controls = document.getElementById("controls");
@@ -33,11 +35,37 @@ function renderControls() {
     });
 
     const shuffleBtn = document.createElement("button");
-    shuffleBtn.className = "ml-4 px-3 py-1 bg-gray-200 rounded text-sm";
-    shuffleBtn.textContent = "Shuffle";
+    // button appearance depends on shuffleMode
+    function updateShuffleButton() {
+        if (shuffleMode) {
+            shuffleBtn.className =
+                "ml-4 px-3 py-1 bg-blue-600 text-white rounded text-sm";
+            shuffleBtn.textContent = "Stop shuffle";
+        } else {
+            shuffleBtn.className = "ml-4 px-3 py-1 bg-gray-200 rounded text-sm";
+            shuffleBtn.textContent = "Shuffle";
+        }
+    }
+    updateShuffleButton();
     shuffleBtn.addEventListener("click", () => {
-        offset = 0;
-        loadPage(offset, true);
+        const u = new URL(window.location.href);
+        if (!shuffleMode) {
+            // turn shuffle ON: set param, update state, reload shuffled
+            shuffleMode = true;
+            u.searchParams.set("shuffle", "1");
+            history.replaceState(null, "", u.toString());
+            offset = 0;
+            updateShuffleButton();
+            loadPage(offset, true);
+        } else {
+            // turn shuffle OFF: remove param, update state, reload deterministic
+            shuffleMode = false;
+            u.searchParams.delete("shuffle");
+            history.replaceState(null, "", u.toString());
+            offset = 0;
+            updateShuffleButton();
+            loadPage(offset, false);
+        }
     });
 
     controls.appendChild(limitLabel);
@@ -104,7 +132,9 @@ async function loadPage(start = 0, shuffle = false) {
     const params = new URLSearchParams();
     params.set("offset", String(start));
     params.set("limit", String(limit));
-    if (shuffle) params.set("shuffle", "1");
+    // if shuffle argument passed or shuffleMode active, request shuffled results
+    const useShuffle = shuffle || shuffleMode;
+    if (useShuffle) params.set("shuffle", "1");
     if (q) params.set("q", q);
     const url = `/browse?${params.toString()}`;
     try {
