@@ -53,14 +53,15 @@ async function search(q, k) {
         }
         for (const r of data) {
             const d = document.createElement("div");
-            d.className = "result";
-            d.innerHTML = `<div><strong>${
+            // preserve existing class but add Tailwind utilities for spacing and border
+            d.className = "result p-3 border-b border-gray-200";
+            d.innerHTML = `<div class="flex justify-between items-baseline"><strong class="text-lg">${
                 r.name
-            }</strong> <span class="score">[${r.score.toFixed(
+            }</strong> <span class="score text-sm text-gray-500">[${r.score.toFixed(
                 4
-            )}]</span></div><div>${r.country || ""}</div><div>${
-                r.description || ""
-            }</div>`;
+            )}]</span></div><div class="text-sm text-gray-600">${
+                r.country || ""
+            }</div><div class="mt-1 text-sm">${r.description || ""}</div>`;
             el.appendChild(d);
         }
     } catch (err) {
