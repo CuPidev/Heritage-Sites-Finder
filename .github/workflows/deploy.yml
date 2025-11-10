@@ -13,9 +13,8 @@ jobs:
 
             - name: Validate required secrets
               run: |
-                  if [ -z "${{ secrets.DEPLOY_HOST }}" ] || [ -z "${{ secrets.DEPLOY_USER }}" ] || [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
-                    echo "One or more required secrets are missing: DEPLOY_HOST, DEPLOY_USER, SSH_PRIVATE_KEY"
-                    echo "Please set them in the repository Settings → Secrets and Variables → Actions"
+                  if [ -z "${{ secrets.DEPLOY_HOST }}" ] || [ -z "${{ secrets.DEPLOY_USER }}" ] || [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ] || [ -z "${{ secrets.DEPLOY_PATH }}" ]; then
+                    echo "One or more required secrets are missing: DEPLOY_HOST, DEPLOY_USER, SSH_PRIVATE_KEY, DEPLOY_PATH"
                     exit 1
                   fi
 
@@ -24,66 +23,59 @@ jobs:
               with:
                   ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-            name: Deploy to VPS
+            - name: Add host to known_hosts (non-blocking)
+              run: |
+                  mkdir -p ~/.ssh
+                  if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
+                    ssh-keyscan -p "${{ secrets.DEPLOY_PORT }}" -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts || true
+                  else
+                    ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts || true
+                  fi
 
-            on:
-              push:
-                branches: [main]
+            - name: Preflight SSH check
+              run: |
+                  SSH_OPTS=""
+                  if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
+                    SSH_OPTS="-p ${{ secrets.DEPLOY_PORT }}"
+                  fi
+                  echo "Testing SSH connection to ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} ${DEPLOY_PORT:+on port $DEPLOY_PORT}"
+                  ssh -o BatchMode=yes -o ConnectTimeout=10 $SSH_OPTS "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "echo connected" || (echo "SSH preflight failed: check DEPLOY_HOST/DEPLOY_USER and that the deploy public key is in ~/.ssh/authorized_keys" && exit 1)
 
-            jobs:
-              deploy:
-                runs-on: ubuntu-latest
+            - name: Create tarball
+              run: |
+                  tar -czf /tmp/repo_deploy.tar.gz --exclude='.git' --exclude='.venv' --exclude='data' .
+                  echo "Created /tmp/repo_deploy.tar.gz (size: $(ls -lh /tmp/repo_deploy.tar.gz | awk '{print $5}'))"
 
-                steps:
-                  - name: Checkout
-                    uses: actions/checkout@v4
+            - name: Copy tarball to VPS
+              run: |
+                  set -euo pipefail
+                  if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
+                    scp -o BatchMode=yes -o ConnectTimeout=10 -P "${{ secrets.DEPLOY_PORT }}" /tmp/repo_deploy.tar.gz "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/repo_deploy.tar.gz"
+                  else
+                    scp -o BatchMode=yes -o ConnectTimeout=10 /tmp/repo_deploy.tar.gz "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/repo_deploy.tar.gz"
+                  fi
 
-                  - name: Start ssh-agent and add key
-                    uses: webfactory/ssh-agent@v0.7.0
-                    with:
-                      ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+            - name: Remote extract, install and restart
+              run: |
+                  set -euo pipefail
+                  SSH_OPTS=""
+                  if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
+                    SSH_OPTS="-p ${{ secrets.DEPLOY_PORT }}"
+                  fi
+                  ssh $SSH_OPTS "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "bash -s" <<'REMOTE'
+                    set -euo pipefail
+                    DEPLOY_PATH='${{ secrets.DEPLOY_PATH }}'
+                    echo "Deploying to $DEPLOY_PATH"
+                    sudo mkdir -p "$DEPLOY_PATH"
+                    sudo tar -xzf /tmp/repo_deploy.tar.gz -C "$DEPLOY_PATH"
+                    sudo rm -f /tmp/repo_deploy.tar.gz
+                    if [ ! -d "$DEPLOY_PATH/.venv" ]; then python3 -m venv "$DEPLOY_PATH/.venv"; fi
+                    . "$DEPLOY_PATH/.venv/bin/activate"
+                    pip install --upgrade pip
+                    pip install -r "$DEPLOY_PATH/requirements.txt"
+                    sudo systemctl restart heritage
+                    echo "Remote deploy finished"
+                  REMOTE
 
-                  - name: Add host to known_hosts (non-blocking)
-                    run: |
-                      mkdir -p ~/.ssh
-                      if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
-                        ssh-keyscan -p "${{ secrets.DEPLOY_PORT }}" -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts || true
-                      else
-                        ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts || true
-                      fi
-
-                  - name: Preflight SSH check
-                    run: |
-                      SSH_OPTS=""
-                      if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
-                        SSH_OPTS="-p ${{ secrets.DEPLOY_PORT }}"
-                      fi
-                      echo "Testing SSH connection to ${DEPLOY_USER}@${DEPLOY_HOST} ${DEPLOY_PORT:+on port $DEPLOY_PORT}"
-                      ssh -o BatchMode=yes -o ConnectTimeout=10 $SSH_OPTS "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "echo connected" || (echo "SSH preflight failed: check DEPLOY_HOST/DEPLOY_USER and that the deploy public key is in ~/.ssh/authorized_keys" && exit 1)
-
-                  - name: Create tarball
-                    run: |
-                      # create a tarball of the repository excluding virtualenv, data and git
-                      tar -czf /tmp/repo_deploy.tar.gz --exclude='.git' --exclude='.venv' --exclude='data' .
-                      echo "Created /tmp/repo_deploy.tar.gz (size: $(ls -lh /tmp/repo_deploy.tar.gz | awk '{print $5}'))"
-
-                  - name: Copy tarball to VPS
-                    run: |
-                      set -euo pipefail
-                      if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
-                        scp -o BatchMode=yes -o ConnectTimeout=10 -P "${{ secrets.DEPLOY_PORT }}" /tmp/repo_deploy.tar.gz "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/repo_deploy.tar.gz"
-                      else
-                        scp -o BatchMode=yes -o ConnectTimeout=10 /tmp/repo_deploy.tar.gz "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/tmp/repo_deploy.tar.gz"
-                      fi
-
-                  - name: Remote extract, install and restart
-                    run: |
-                      set -euo pipefail
-                      SSH_OPTS=""
-                      if [ -n "${{ secrets.DEPLOY_PORT }}" ]; then
-                        SSH_OPTS="-p ${{ secrets.DEPLOY_PORT }}"
-                      fi
-                      ssh $SSH_OPTS "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "bash -l -c 'set -euo pipefail; DEPLOY_PATH=${{ secrets.DEPLOY_PATH }}; echo "Deploying to $DEPLOY_PATH"; sudo mkdir -p $DEPLOY_PATH; sudo tar -xzf /tmp/repo_deploy.tar.gz -C $DEPLOY_PATH; sudo rm -f /tmp/repo_deploy.tar.gz; if [ ! -d $DEPLOY_PATH/.venv ]; then python3 -m venv $DEPLOY_PATH/.venv; fi; source $DEPLOY_PATH/.venv/bin/activate; pip install --upgrade pip; pip install -r $DEPLOY_PATH/requirements.txt; sudo systemctl restart heritage; echo "Remote deploy finished"'
-
-                  - name: Cleanup local tarball
-                    run: rm -f /tmp/repo_deploy.tar.gz
+            - name: Cleanup local tarball
+              run: rm -f /tmp/repo_deploy.tar.gz
