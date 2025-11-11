@@ -1,3 +1,104 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+*.egg
+
+# Installer logs
+pip-delete-this-directory.txt
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# Pytest cache
+.pytest_cache/
+.cache/
+
+# Coverage and reports
+.coverage
+coverage.xml
+htmlcov/
+
+# Mypy
+.mypy_cache/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+
+# Environment variables / secrets
+.env
+.env.*
+secrets.yaml
+
+# Node / frontend
+node_modules/
+frontend/node_modules/
+web/node_modules/
+
+# Frontend build outputs (Vite/React/Tailwind/etc.)
+frontend/dist/
+web/dist/
+dist/
+build/
+.vite/
+
+# Tailwind / PostCSS caches
+.cache/
+
+# Jupyter
+.ipynb_checkpoints
+
+# Compiled source
+*.pyc
+*.pyo
+
+# Other
+*.pem
+*.key
+*.crt
+
+# Generated project artifacts we don't want in git
+data/
+data/*.pkl
+data/*.db
+data/*.sqlite
+
+# Coverage folders
+htmlcov/
+
+# Terraform / Vagrant
+.terraform/
+.vagrant/
+
+# PowerShell history
+ConsoleHost_history.txt
 __pycache__/
 *.pyc
 env/
@@ -9,3 +110,5 @@ data/
 *.pkl
 .venv
 .idea
+.node_modules/
+.DS_Store
