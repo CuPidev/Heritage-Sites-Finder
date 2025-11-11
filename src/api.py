@@ -35,7 +35,7 @@ def create_app(static_folder: Optional[str] = None):
         # current simple frontend
         # static_folder = os.path.join(ROOT, "web")
         # React built frontend
-        static_folder = os.path.join(ROOT, "web/dist")
+        static_folder = os.path.join(ROOT, "frontend/dist")
 
     app = Flask(__name__, static_folder=static_folder, static_url_path="")
     CORS(app)
