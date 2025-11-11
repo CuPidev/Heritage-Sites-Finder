@@ -10,6 +10,9 @@ const q = qs("q", "");
 let shuffleMode = qs("shuffle", "0") === "1";
 let total = 0;
 
+// Minimum characters that should always get a Show more control
+const MIN_SHOW_MORE_CHARS = 220;
+
 const controls = document.getElementById("controls");
 const listEl = document.getElementById("list");
 const pager = document.getElementById("pager");
@@ -17,56 +20,48 @@ const pager = document.getElementById("pager");
 function renderControls() {
     controls.innerHTML = "";
     const limitLabel = document.createElement("label");
-    limitLabel.className = "text-sm text-gray-700";
+    limitLabel.className = "text-sm text-gray-700 mr-2";
     limitLabel.textContent = "Per page:";
+
     const limitSel = document.createElement("select");
     limitSel.className = "ml-2 border rounded px-2";
     [10, 20, 50, 100].forEach((n) => {
-        const o = document.createElement("option");
-        o.value = String(n);
-        o.text = String(n);
-        if (n === limit) o.selected = true;
-        limitSel.appendChild(o);
+        const opt = document.createElement("option");
+        opt.value = String(n);
+        opt.textContent = String(n);
+        if (n === limit) opt.selected = true;
+        limitSel.appendChild(opt);
     });
     limitSel.addEventListener("change", () => {
-        limit = parseInt(limitSel.value, 10);
+        limit = parseInt(limitSel.value, 10) || limit;
         offset = 0;
-        loadPage(offset);
+        const u = new URL(location);
+        u.searchParams.set("limit", String(limit));
+        u.searchParams.set("offset", "0");
+        history.replaceState(null, "", u.toString());
+        loadPage(0);
     });
 
+    // shuffle toggle
     const shuffleBtn = document.createElement("button");
-    // button appearance depends on shuffleMode
+    shuffleBtn.className = "px-3 py-1 bg-white border rounded text-sm ml-3";
     function updateShuffleButton() {
-        if (shuffleMode) {
-            shuffleBtn.className =
-                "ml-4 px-3 py-1 bg-blue-600 text-white rounded text-sm";
-            shuffleBtn.textContent = "Stop shuffle";
-        } else {
-            shuffleBtn.className = "ml-4 px-3 py-1 bg-gray-200 rounded text-sm";
-            shuffleBtn.textContent = "Shuffle";
-        }
+        shuffleBtn.textContent = shuffleMode ? "Shuffle: ON" : "Shuffle: OFF";
+        shuffleBtn.setAttribute("aria-pressed", shuffleMode ? "true" : "false");
     }
-    updateShuffleButton();
     shuffleBtn.addEventListener("click", () => {
-        const u = new URL(window.location.href);
-        if (!shuffleMode) {
-            // turn shuffle ON: set param, update state, reload shuffled
-            shuffleMode = true;
-            u.searchParams.set("shuffle", "1");
-            history.replaceState(null, "", u.toString());
-            offset = 0;
-            updateShuffleButton();
-            loadPage(offset, true);
-        } else {
-            // turn shuffle OFF: remove param, update state, reload deterministic
-            shuffleMode = false;
-            u.searchParams.delete("shuffle");
-            history.replaceState(null, "", u.toString());
-            offset = 0;
-            updateShuffleButton();
-            loadPage(offset, false);
-        }
+        shuffleMode = !shuffleMode;
+        const u = new URL(location);
+        if (shuffleMode) u.searchParams.set("shuffle", "1");
+        else u.searchParams.delete("shuffle");
+        u.searchParams.set("offset", "0");
+        history.replaceState(null, "", u.toString());
+        offset = 0;
+        updateShuffleButton();
+        loadPage(0, shuffleMode);
     });
+
+    updateShuffleButton();
 
     controls.appendChild(limitLabel);
     controls.appendChild(limitSel);
@@ -116,15 +111,162 @@ function renderList(items) {
         listEl.textContent = "No items";
         return;
     }
+    // helpers for safe highlighting and truncation
+    function truncate(str, n) {
+        if (!str) return "";
+        return str.length > n ? str.slice(0, n - 1) + "…" : str;
+    }
+    function escapeHtml(s) {
+        return String(s)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/\"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+    function escapeRegex(s) {
+        return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+    function highlightText(text, query) {
+        if (!text) return "";
+        const escaped = escapeHtml(text);
+        if (!query) return escaped;
+        const tokens = query
+            .split(/\s+/)
+            .map((t) => t.trim())
+            .filter(Boolean)
+            .map(escapeRegex);
+        if (tokens.length === 0) return escaped;
+        const re = new RegExp("(" + tokens.join("|") + ")", "ig");
+        return escaped.replace(re, '<span class="highlight">$1</span>');
+    }
+
     for (const it of items) {
-        const d = document.createElement("div");
-        d.className = "p-3 border-b bg-white rounded";
-        d.innerHTML = `<div class=\"flex justify-between items-baseline\"><strong class=\"text-lg\">${
-            it.name
-        }</strong></div><div class=\"text-sm text-gray-600\">${
-            it.country || ""
-        }</div><div class=\"mt-1 text-sm\">${it.description || ""}</div>`;
-        listEl.appendChild(d);
+        const card = document.createElement("article");
+        card.className = "result";
+
+        const header = document.createElement("div");
+        header.className = "result-header";
+        const title = document.createElement("div");
+        title.className = "result-title";
+        title.innerHTML = highlightText(it.name || "(no title)", q);
+        header.appendChild(title);
+
+        const rightMeta = document.createElement("div");
+        rightMeta.style.display = "flex";
+        rightMeta.style.alignItems = "center";
+        rightMeta.style.gap = "0.5rem";
+        if (it.country) {
+            const country = document.createElement("span");
+            country.className = "country-badge";
+            country.textContent = it.country;
+            rightMeta.appendChild(country);
+        }
+        header.appendChild(rightMeta);
+        card.appendChild(header);
+
+        const fullText = it.description || "";
+        const maxLen = 400; // slightly shorter in browse list
+        const shortText = truncate(fullText, maxLen);
+        const desc = document.createElement("p");
+        desc.className = "description";
+        desc.innerHTML = highlightText(shortText, q);
+        card.appendChild(desc);
+
+        if (
+            fullText &&
+            (fullText.length > maxLen || fullText.length >= MIN_SHOW_MORE_CHARS)
+        ) {
+            const more = document.createElement("button");
+            more.type = "button";
+            more.className = "show-more";
+            more.textContent = "Show more";
+            let expanded = false;
+            more.addEventListener("click", () => {
+                expanded = !expanded;
+                if (expanded) {
+                    desc.innerHTML = highlightText(fullText, q);
+                    more.textContent = "Show less";
+                    card.classList.add("expanded");
+                } else {
+                    desc.innerHTML = highlightText(shortText, q);
+                    more.textContent = "Show more";
+                    card.classList.remove("expanded");
+                }
+            });
+            // show immediately (hotfix) so users can expand long items like Hegra
+            more.style.display = "";
+            card.appendChild(more);
+
+            // measure after layout stabilizes (double rAF) and show/remove accordingly
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    const rootFont =
+                        parseFloat(
+                            getComputedStyle(document.documentElement).fontSize
+                        ) || 16;
+                    const overlayPx = rootFont * 2.6;
+                    const descRect = desc.getBoundingClientRect();
+                    const cardRect = card.getBoundingClientRect();
+                    const overflows =
+                        descRect.bottom > cardRect.bottom - overlayPx - 2;
+                    if (overflows) {
+                        more.style.display = "";
+                    } else {
+                        if (
+                            new URL(location).searchParams.has("debug_showmore")
+                        ) {
+                            console.debug(
+                                "HSF: browse no overflow (hotfix keep)",
+                                {
+                                    title: it.name,
+                                    cardClient: card.clientHeight,
+                                    cardScroll: card.scrollHeight,
+                                    descClient: desc.clientHeight,
+                                    descScroll: desc.scrollHeight,
+                                    descRect,
+                                    cardRect,
+                                }
+                            );
+                        }
+                        /* hotfix: keep the Show more control visible to guarantee expandability */
+                    }
+                });
+            });
+
+            // fallback check
+            setTimeout(() => {
+                if (!document.contains(more)) return;
+                if (more.style.display === "") return;
+                const rootFont =
+                    parseFloat(
+                        getComputedStyle(document.documentElement).fontSize
+                    ) || 16;
+                const overlayPx = rootFont * 2.6;
+                const descRect = desc.getBoundingClientRect();
+                const cardRect = card.getBoundingClientRect();
+                const overflows =
+                    descRect.bottom > cardRect.bottom - overlayPx - 2;
+                if (overflows) more.style.display = "";
+                else if (document.contains(more)) {
+                    if (new URL(location).searchParams.has("debug_showmore")) {
+                        console.debug(
+                            "HSF(fallback): browse no overflow (hotfix keep)",
+                            {
+                                title: it.name,
+                                cardClient: card.clientHeight,
+                                cardScroll: card.scrollHeight,
+                                descClient: desc.clientHeight,
+                                descScroll: desc.scrollHeight,
+                            }
+                        );
+                    }
+                    /* hotfix: keep Show more visible */
+                }
+            }, 120);
+        }
+
+        listEl.appendChild(card);
     }
 }
 

@@ -10,13 +10,142 @@ button {
     padding: 0.5rem 1rem;
 }
 .result {
-    margin: 0.5rem 0;
-    padding: 0.5rem;
-    border-bottom: 1px solid #ddd;
+    margin: 0.6rem 0;
+    padding: 0.75rem;
+    background: #fff;
+    border: 1px solid #e6e6e6;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03);
+}
+
+/* uniform collapsed card height; expanded cards switch to auto */
+:root {
+    --card-collapsed-height: 14rem; /* increased so more lines are visible before truncation */
+}
+@media (max-width: 640px) {
+    :root {
+        --card-collapsed-height: 16rem; /* mobile: slightly taller to show more content */
+    }
+}
+.result {
+    /* use max-height so the card can smoothly expand while keeping the
+       Show more control in the normal flow (not absolutely positioned) */
+    max-height: var(--card-collapsed-height);
+    overflow: hidden;
+    transition: max-height 220ms ease, box-shadow 180ms ease,
+        transform 180ms ease;
+}
+.result.expanded {
+    max-height: 2000px; /* large enough to contain expanded content */
+}
+
+/* ensure content area reserves space so Show more (absolute) is visible */
+.result {
+    position: relative;
+}
+.description {
+    padding-bottom: 3rem; /* reserve space so absolute-positioned Show more sits above text */
+}
+
+/* place Show more as visible badge at bottom-right when collapsed */
+.show-more {
+    position: absolute;
+    right: 0.6rem;
+    bottom: 0.6rem;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    color: var(--accent);
+    font-size: 0.95rem;
+    cursor: pointer;
+    z-index: 6;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+/* when expanded, put show-more back into flow */
+.result.expanded .show-more {
+    position: static;
+    margin-top: 0.5rem;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+/* subtle fade at the bottom of truncated cards to hint more content */
+.result:not(.expanded)::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2rem; /* slightly shorter overlay so less text is hidden */
+    pointer-events: none;
+    background: linear-gradient(
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, 0.95)
+    );
+    z-index: 4; /* keep overlay beneath the show-more (z-index:6) */
 }
 .score {
-    color: #666;
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+.result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+.result-title {
+    font-weight: 600;
+    color: #0f172a;
+}
+.country-badge {
+    background: #eef2ff;
+    color: #3730a3;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+.description {
+    color: #374151;
+    margin-top: 0.4rem;
+    font-size: 1rem;
+    line-height: 1.45;
+}
+.result:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(16, 24, 40, 0.08);
+    /* make hover border use the current theme accent */
+    border-color: var(--accent-700);
+}
+.highlight {
+    background: var(--accent-50);
+    padding: 0 0.12rem;
+    border-radius: 2px;
+    color: var(--accent-700);
+}
+.show-more {
+    display: inline-block;
+    margin-top: 0.5rem;
+    color: var(--accent);
     font-size: 0.9rem;
+    cursor: pointer;
+}
+
+/* smooth transitions for theme-aware properties */
+.result,
+.country-badge,
+.show-more,
+.highlight {
+    transition: border-color 150ms ease, background-color 150ms ease,
+        color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+.meta {
+    margin-top: 0.35rem;
+    color: #6b7280;
+    font-size: 0.85rem;
 }
 .spinner {
     display: inline-block;
@@ -36,4 +165,71 @@ button {
     to {
         transform: rotate(360deg);
     }
+}
+
+/* Accent color overrides: choose a warmer teal to pair with the light gray background */
+:root {
+    --accent: #0d9488; /* teal-600 */
+    --accent-700: #0f766e; /* slightly darker */
+    --accent-50: #ecfdf5; /* very light */
+}
+
+/* Theme classes: applied on <html> to switch variables */
+.theme-teal {
+    --accent: #0d9488;
+    --accent-700: #0f766e;
+    --accent-50: #ecfdf5;
+}
+.theme-indigo {
+    --accent: #4f46e5;
+    --accent-700: #4338ca;
+    --accent-50: #eef2ff;
+}
+.theme-terracotta {
+    --accent: #c2410c;
+    --accent-700: #9a3412;
+    --accent-50: #fff7ed;
+}
+.theme-olive {
+    --accent: #15803d;
+    --accent-700: #166534;
+    --accent-50: #f0fdf4;
+}
+
+/* Override some commonly used Tailwind blue classes to use our accent */
+.bg-blue-600 {
+    background-color: var(--accent) !important;
+}
+.bg-blue-700 {
+    background-color: var(--accent-700) !important;
+}
+.hover\:bg-blue-700:hover {
+    background-color: var(--accent-700) !important;
+}
+.text-blue-600 {
+    color: var(--accent) !important;
+}
+.border-blue-600 {
+    border-color: var(--accent) !important;
+}
+.hover\:text-blue-800:hover {
+    color: var(--accent-700) !important;
+}
+.hover\:bg-blue-50:hover {
+    background-color: var(--accent-50) !important;
+}
+.bg-blue-50 {
+    background-color: var(--accent-50) !important;
+}
+
+/* Make country badge use accent variants */
+.country-badge {
+    background: var(--accent-50);
+    color: var(--accent-700);
+}
+
+/* Primary action (Search) should match accent and look slightly stronger */
+.bg-blue-600,
+button.bg-blue-600 {
+    box-shadow: 0 1px 0 rgba(13, 148, 136, 0.08);
 }

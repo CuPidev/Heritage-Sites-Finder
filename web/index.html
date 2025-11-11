@@ -23,6 +23,13 @@
                     <h2 class="text-sm font-medium text-gray-700 mb-2">
                         Authors — Team 19
                     </h2>
+                    <div class="mt-2 mb-2 text-sm text-gray-600">
+                        Theme:
+                        <select
+                            id="theme-select"
+                            class="ml-2 border rounded px-2 py-1 text-sm"
+                        ></select>
+                    </div>
                     <ul class="list-disc pl-5 space-y-1 text-sm text-gray-700">
                         <li>Mateusz Cupryniak</li>
                         <li>František Vlček</li>
@@ -33,6 +40,17 @@
 
             <div>Search for heritage sites below!</div>
 
+            <div class="mb-4 flex justify-center sm:justify-start">
+                <a
+                    href="/browse.html?shuffle=1"
+                    class="inline-flex items-center gap-2 border border-blue-600 text-blue-600 px-3 py-2 rounded-lg hover:bg-blue-50"
+                >
+                    <span class="font-medium text-sm"
+                        >I want to browse instead</span
+                    >
+                </a>
+            </div>
+
             <div
                 class="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-4"
             >
@@ -40,7 +58,8 @@
                     <input
                         id="q"
                         type="text"
-                        placeholder="e.g. old castle"
+                        autofocus
+                        placeholder="type here e.g. old castle"
                         class="border-2 border-gray-300 bg-white rounded px-3 h-10 flex-1 min-w-0 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:border-blue-600 shadow-sm"
                     />
                     <label for="k" class="sr-only">Results</label>
@@ -73,18 +92,10 @@
                     ></span>
                 </div>
             </div>
-            <div class="mb-4">
-                <a
-                    href="/browse.html?shuffle=1"
-                    class="w-full inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 shadow-md"
-                >
-                    <span class="font-medium">I want to browse instead!</span>
-                </a>
-            </div>
 
             <div id="results" class="mt-4"></div>
         </div>
-
+        <script src="theme.js"></script>
         <script src="app.js"></script>
     </body>
 </html>
