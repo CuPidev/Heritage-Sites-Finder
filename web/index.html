@@ -4,6 +4,7 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Heritage Sites Finder</title>
+        <link rel="icon" type="image/x-icon" href="./public/images/stone.png" />
         <!-- Quick Tailwind prototyping via CDN - replace with a proper build for production -->
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="style.css" />
@@ -12,11 +13,12 @@
         <div class="max-w-3xl mx-auto px-4 py-6">
             <header class="mb-6">
                 <h1 class="text-3xl font-semibold mb-2">
-                    Heritage Sites Finder
+                    🪨Heritage Sites Finder
                 </h1>
                 <p class="text-sm text-gray-600 mb-2">
                     Search UNESCO World Heritage sites by keyword.
                 </p>
+                🗽🗼🗿🏛️🌉🏰🕌⛩️🕋🎡
                 <div class="mt-3">
                     <h2 class="text-sm font-medium text-gray-700 mb-2">
                         Authors — Team 19
@@ -28,15 +30,17 @@
                     </ul>
                 </div>
             </header>
+
+            <div>Search for heritage sites below!</div>
+
             <div
                 class="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-4"
             >
-                <!-- input + select on first row (mobile), button below; inline on sm+ -->
                 <div class="flex items-center gap-2 w-full">
                     <input
                         id="q"
                         type="text"
-                        placeholder="e.g. temple ruins"
+                        placeholder="e.g. old castle"
                         class="border-2 border-gray-300 bg-white rounded px-3 h-10 flex-1 min-w-0 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:border-blue-600 shadow-sm"
                     />
                     <label for="k" class="sr-only">Results</label>
@@ -67,36 +71,15 @@
                         style="display: none"
                         aria-hidden="true"
                     ></span>
-                    <a
-                        id="backend-test"
-                        href="/search?q=test"
-                        class="ml-3 text-sm text-blue-600"
-                        >Test backend</a
-                    >
-                    <!-- prettier Browse button -->
-                    <a
-                        href="/browse.html?shuffle=1"
-                        class="ml-4 inline-flex items-center gap-2 bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 shadow-sm"
-                    >
-                        <!-- list icon: three horizontal lines -->
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="h-4 w-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            aria-hidden="true"
-                        >
-                            <path d="M3 6h18"></path>
-                            <path d="M3 12h18"></path>
-                            <path d="M3 18h18"></path>
-                        </svg>
-                        <span class="text-sm font-medium">Browse</span>
-                    </a>
                 </div>
+            </div>
+            <div class="mb-4">
+                <a
+                    href="/browse.html?shuffle=1"
+                    class="w-full inline-flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 shadow-md"
+                >
+                    <span class="font-medium">I want to browse instead!</span>
+                </a>
             </div>
 
             <div id="results" class="mt-4"></div>
