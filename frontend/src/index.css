@@ -1,0 +1,183 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ported styles from original web/style.css - keeps look consistent with prior UI */
+body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.result {
+    margin: 0.6rem 0;
+    padding: 0.75rem;
+    background: #fff;
+    border: 1px solid #e6e6e6;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03);
+    max-height: var(--card-collapsed-height, 14rem);
+    overflow: hidden;
+    transition: max-height 220ms ease, box-shadow 180ms ease,
+        transform 180ms ease;
+    position: relative;
+}
+/* hover: subtle lift + accent border + inner sheen */
+.result:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent-700);
+    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* keyboard focus outline for accessibility */
+.result:focus-within,
+.result:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-50), 0 6px 20px rgba(2, 6, 23, 0.06);
+}
+.result.expanded {
+    max-height: 2000px;
+}
+.description {
+    padding-bottom: 3rem;
+    color: #374151;
+    margin-top: 0.4rem;
+    font-size: 1rem;
+    line-height: 1.45;
+}
+.result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+.result-title {
+    font-weight: 600;
+    color: #0f172a;
+}
+.country-badge {
+    background: #eef2ff;
+    color: #3730a3;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+.score {
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+.show-more {
+    position: absolute;
+    right: 0.6rem;
+    bottom: 0.6rem;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    color: var(--accent-700);
+    font-size: 0.95rem;
+    cursor: pointer;
+    z-index: 6;
+    border: 1px solid var(--accent);
+}
+.result.expanded .show-more {
+    position: static;
+    margin-top: 0.5rem;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+.result:not(.expanded)::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2rem;
+    pointer-events: none;
+    background: linear-gradient(
+        rgba(255, 255, 255, 0),
+        rgba(255, 255, 255, 0.95)
+    );
+    z-index: 4;
+}
+.highlight {
+    background: var(--accent-50);
+    padding: 0 0.12rem;
+    border-radius: 2px;
+    color: var(--accent-700);
+}
+.meta {
+    margin-top: 0.35rem;
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ccc;
+    border-top-color: #333;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+:root {
+    --card-collapsed-height: 14rem;
+    --accent: #0d9488;
+    --accent-700: #0f766e;
+    --accent-50: #ecfdf5;
+}
+@media (max-width: 640px) {
+    :root {
+        --card-collapsed-height: 16rem;
+    }
+}
+
+/* Theme class variants (applied on <html> by ThemeSelector) */
+.theme-teal {
+    --accent: #0d9488;
+    --accent-700: #0f766e;
+    --accent-50: #ecfdf5;
+}
+.theme-indigo {
+    --accent: #4f46e5;
+    --accent-700: #4338ca;
+    --accent-50: #eef2ff;
+}
+.theme-terracotta {
+    --accent: #c2410c;
+    --accent-700: #9a3412;
+    --accent-50: #fff7ed;
+}
+.theme-olive {
+    --accent: #15803d;
+    --accent-700: #166534;
+    --accent-50: #f0fdf4;
+}
+
+/* Accent class overrides to keep earlier look */
+.bg-blue-600 {
+    background-color: var(--accent) !important;
+}
+.bg-blue-700 {
+    background-color: var(--accent-700) !important;
+}
+.text-blue-600 {
+    color: var(--accent) !important;
+}
+.border-blue-600 {
+    border-color: var(--accent) !important;
+}
+.hover\:bg-blue-50:hover {
+    background-color: var(--accent-50) !important;
+}

@@ -30,6 +30,27 @@ jobs:
                   echo "Testing SSH connection to ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} ${DEPLOY_PORT:+on port $DEPLOY_PORT}"
                   sshpass -p "${{ secrets.DEPLOY_PASSWORD }}" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 $SSH_OPTS "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" "echo connected" || (echo "SSH preflight failed: check DEPLOY_HOST/DEPLOY_USER and DEPLOY_PASSWORD, and that PasswordAuthentication is enabled on the VPS" && exit 1)
 
+            - name: Setup Node.js (for frontend build)
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+
+            - name: Cache frontend node modules
+              uses: actions/cache@v4
+              with:
+                  path: frontend/node_modules
+                  key: ${{ runner.os }}-node-${{ hashFiles('frontend/yarn.lock', 'frontend/package.json') }}
+                  restore-keys: |
+                      ${{ runner.os }}-node-
+
+            - name: Install frontend deps
+              working-directory: frontend
+              run: yarn install --frozen-lockfile
+
+            - name: Build frontend
+              working-directory: frontend
+              run: yarn build
+
             - name: Create tarball
               run: |
                   tar -czf /tmp/repo_deploy.tar.gz --exclude='.git' --exclude='.venv' --exclude='data' .

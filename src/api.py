@@ -32,7 +32,11 @@ except Exception:
 # this is what is actually used by the runner
 def create_app(static_folder: Optional[str] = None):
     if static_folder is None:
-        static_folder = os.path.join(ROOT, "web")
+        # current simple frontend
+        # static_folder = os.path.join(ROOT, "web")
+        # React built frontend
+        static_folder = os.path.join(ROOT, "web/dist")
+
     app = Flask(__name__, static_folder=static_folder, static_url_path="")
     CORS(app)
 
