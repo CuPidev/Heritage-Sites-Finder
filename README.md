@@ -1,35 +1,42 @@
-# Heritage Sites Finder (UNESCO World Heritage IR project)
+# Movie locations finder Search Engine - MLFSE
 
-Small Information Retrieval (IR) project that fetches UNESCO World Heritage data, builds a TF-IDF index, and provides a tiny CLI to search site descriptions.
+## Quick start
 
-Quick start
+-   Create virtual enviornment for python (or be a gigachad and do it globally)
+-   Install python dependencies
 
--   create a virtual environment and activate it
--   install dependencies: pip install -r requirements.txt
--   run tests: pytest -q
+```bash
+pip install -r requirements.txt
+```
 
-CLI examples
+-   Go into the frontend dir
 
--   Fetch & index (attempts to fetch from configured UNESCO endpoint):
-    python -m src.cli fetch --out data/sites.json
+```bash
+cd ./frontend
+```
 
--   Search an index (or JSON file):
-    python -m src.cli search --json data/sites.json "ancient temple"
+-   Install frontend dependencies
 
-    Run the Flask API and frontend
+```bash
+yarn install
+```
 
-    -   Start the API (from project root with venv active):
-        python -m src.api
+-   Build the frontend
 
-    Open http://127.0.0.1:5000/ in your browser to use the simple frontend.
+```bash
+yarn build
+```
 
-Project layout
+-   Return to the main dir and run the app
 
--   `src/fetcher.py` : functions to fetch UNESCO data or load fallback/sample data
--   `src/indexer.py` : TF-IDF indexing and search utilities
--   `src/cli.py` : simple CLI to fetch, index and search
--   `tests/` : unit tests (indexer)
+```bash
+cd ..
+python run_api.py
+```
 
-Notes
+The app will be available at 127.0.0.1:5000 by default
 
-The project uses scikit-learn's TfidfVectorizer for a compact search index. The fetcher attempts to hit UNESCO's public listing; if the endpoint changes, pass your own JSON file to the CLI.
+## Structure
+
+Sample movie location data in movie_locations.json \
+Crawler for movie locations com in ./crawler dir
